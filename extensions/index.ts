@@ -164,6 +164,25 @@ function isCodingModel(model: MiMoModel, plat?: MiMoPlatformModel): boolean {
   return true;
 }
 
+const PLATFORM_MODEL_ALIAS_SUFFIXES = ["-ultraspeed"];
+
+function getPlatformModel(
+  platformModels: Map<string, MiMoPlatformModel>,
+  modelId: string,
+): MiMoPlatformModel | undefined {
+  const exact = platformModels.get(modelId);
+  if (exact) return exact;
+
+  for (const suffix of PLATFORM_MODEL_ALIAS_SUFFIXES) {
+    if (!modelId.endsWith(suffix)) continue;
+    const baseModelId = modelId.slice(0, -suffix.length);
+    const base = platformModels.get(baseModelId) ?? platformModels.get(`xiaomi/${baseModelId}`);
+    if (base) return base;
+  }
+
+  return undefined;
+}
+
 export default async function (pi: ExtensionAPI) {
   const { apiKey, baseUrl, api } = resolveConfig();
 
@@ -228,7 +247,7 @@ export default async function (pi: ExtensionAPI) {
 
   // Filter to coding-only models
   const codingModels = modelsResponse.data.filter((model) =>
-    isCodingModel(model, platformModels.get(model.id)),
+    isCodingModel(model, getPlatformModel(platformModels, model.id)),
   );
 
   if (codingModels.length === 0) {
@@ -239,7 +258,7 @@ export default async function (pi: ExtensionAPI) {
   const filtered = modelsResponse.data.length - codingModels.length;
 
   const models = codingModels.map((model) => {
-    const plat = platformModels.get(model.id);
+    const plat = getPlatformModel(platformModels, model.id);
     const inputModalities = plat?.architecture?.input_modalities ?? ["text"];
     const input: Array<"text" | "image"> = [];
     if (inputModalities.includes("text")) input.push("text");
