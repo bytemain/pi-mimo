@@ -268,8 +268,8 @@ export default async function (pi: ExtensionAPI) {
 
     return {
       id: model.id,
-      name: MODEL_ALIASES[model.id]
-        ? `${plat?.name ?? model.id} (${model.id})`
+      name: MODEL_ALIASES[model.id] && plat?.name
+        ? `${plat.name} (${model.id})`
         : (plat?.name ?? model.id),
       reasoning: /reasoning|pro|think/i.test(model.id),
       input: input.length > 0 ? input : (["text"] as Array<"text" | "image">),
