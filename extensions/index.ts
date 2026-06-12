@@ -163,10 +163,25 @@ function isCodingModel(model: MiMoModel, plat?: MiMoPlatformModel): boolean {
   return true;
 }
 
-/** Models that share platform metadata with another model. */
-const MODEL_ALIASES: Record<string, string> = {
-  "mimo-v2.5-pro-ultraspeed": "mimo-v2.5-pro",
-};
+/** Built-in platform metadata for models not yet listed on the platform API. */
+const BUILTIN_PLATFORM_MODELS: MiMoPlatformModel[] = [
+  {
+    id: "mimo-v2.5-pro-ultraspeed",
+    name: "Xiaomi MiMo:mimo-v2.5-pro-ultraspeed",
+    context_length: 1048576,
+    max_output_length: 131072,
+    architecture: {
+      modality: "text->text",
+      input_modalities: ["text"],
+      output_modalities: ["text"],
+    },
+    pricing: {
+      prompt: "0.000001305",
+      completion: "0.00000261",
+      input_cache_read: "0.0000000108",
+    },
+  },
+];
 
 export default async function (pi: ExtensionAPI) {
   const { apiKey, baseUrl, api } = resolveConfig();
@@ -212,7 +227,10 @@ export default async function (pi: ExtensionAPI) {
   }
 
   // Enrich with platform metadata if available
-  let platformModels: Map<string, MiMoPlatformModel> = new Map();
+  // Seed with built-in entries first; platform API data takes precedence when available.
+  const platformModels: Map<string, MiMoPlatformModel> = new Map(
+    BUILTIN_PLATFORM_MODELS.map((m) => [m.id, m]),
+  );
   try {
     const platResp = await fetch(`${PLATFORM_URL}/models`);
     if (platResp.ok) {
@@ -224,11 +242,6 @@ export default async function (pi: ExtensionAPI) {
         platformModels.set(m.id, m);
         const bare = m.id.replace(/^.*\//, "");
         if (bare !== m.id) platformModels.set(bare, m);
-      }
-      // Register aliases so aliased models inherit the same metadata
-      for (const [alias, target] of Object.entries(MODEL_ALIASES)) {
-        const targetMeta = platformModels.get(target);
-        if (targetMeta) platformModels.set(alias, targetMeta);
       }
     }
   } catch {
@@ -268,9 +281,7 @@ export default async function (pi: ExtensionAPI) {
 
     return {
       id: model.id,
-      name: MODEL_ALIASES[model.id] && plat?.name
-        ? `${plat.name} (${model.id})`
-        : (plat?.name ?? model.id),
+      name: plat?.name ?? model.id,
       reasoning: /reasoning|pro|think/i.test(model.id),
       input: input.length > 0 ? input : (["text"] as Array<"text" | "image">),
       cost: costPerMillion,
