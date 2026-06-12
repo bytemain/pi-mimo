@@ -59,6 +59,7 @@ interface MiMoPlatformModel {
 
 const DEFAULT_BASE_URL = "https://token-plan-sgp.xiaomimimo.com/v1";
 const PLATFORM_URL = "https://platform.xiaomimimo.com/api/v1";
+const PLATFORM_VENDOR_PREFIX = "xiaomi/";
 
 type MiMoApi = "openai-completions" | "anthropic-messages";
 
@@ -176,7 +177,9 @@ function getPlatformModel(
   for (const suffix of PLATFORM_MODEL_ALIAS_SUFFIXES) {
     if (!modelId.endsWith(suffix)) continue;
     const baseModelId = modelId.slice(0, -suffix.length);
-    const base = platformModels.get(baseModelId) ?? platformModels.get(`xiaomi/${baseModelId}`);
+    const base =
+      platformModels.get(baseModelId) ??
+      platformModels.get(`${PLATFORM_VENDOR_PREFIX}${baseModelId}`);
     if (base) return base;
   }
 
