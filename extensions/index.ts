@@ -175,10 +175,11 @@ const BUILTIN_PLATFORM_MODELS: MiMoPlatformModel[] = [
       input_modalities: ["text"],
       output_modalities: ["text"],
     },
+    // Pricing in USD per token (divide the per-million price by 1,000,000)
     pricing: {
-      prompt: "0.000001305",
-      completion: "0.00000261",
-      input_cache_read: "0.0000000108",
+      prompt: "0.000001305",       // $1.305/M tokens (cache miss)
+      completion: "0.00000261",    // $2.61/M tokens
+      input_cache_read: "0.0000000108", // $0.0108/M tokens (cache hit)
     },
   },
 ];
