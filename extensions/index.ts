@@ -163,26 +163,10 @@ function isCodingModel(model: MiMoModel, plat?: MiMoPlatformModel): boolean {
   return true;
 }
 
-const PLATFORM_MODEL_ALIAS_SUFFIXES = ["-ultraspeed"];
-
-function getPlatformModel(
-  platformModels: Map<string, MiMoPlatformModel>,
-  modelId: string,
-): MiMoPlatformModel | undefined {
-  const exact = platformModels.get(modelId);
-  if (exact) return exact;
-
-  for (const suffix of PLATFORM_MODEL_ALIAS_SUFFIXES) {
-    if (!modelId.endsWith(suffix)) continue;
-    const baseModelId = modelId.slice(0, -suffix.length);
-    const base =
-      platformModels.get(baseModelId) ??
-      platformModels.get(`${PLATFORM_VENDOR_PREFIX}${baseModelId}`);
-    if (base) return base;
-  }
-
-  return undefined;
-}
+/** Models that share platform metadata with another model. */
+const MODEL_ALIASES: Record<string, string> = {
+  "mimo-v2.5-pro-ultraspeed": "mimo-v2.5-pro",
+};
 
 export default async function (pi: ExtensionAPI) {
   const { apiKey, baseUrl, api } = resolveConfig();
@@ -241,6 +225,11 @@ export default async function (pi: ExtensionAPI) {
         const bare = m.id.replace(/^.*\//, "");
         if (bare !== m.id) platformModels.set(bare, m);
       }
+      // Register aliases so aliased models inherit the same metadata
+      for (const [alias, target] of Object.entries(MODEL_ALIASES)) {
+        const targetMeta = platformModels.get(target);
+        if (targetMeta) platformModels.set(alias, targetMeta);
+      }
     }
   } catch {
     // Platform metadata optional — proceed without
@@ -248,7 +237,7 @@ export default async function (pi: ExtensionAPI) {
 
   // Filter to coding-only models
   const codingModels = modelsResponse.data.filter((model) =>
-    isCodingModel(model, getPlatformModel(platformModels, model.id)),
+    isCodingModel(model, platformModels.get(model.id)),
   );
 
   if (codingModels.length === 0) {
@@ -259,7 +248,7 @@ export default async function (pi: ExtensionAPI) {
   const filtered = modelsResponse.data.length - codingModels.length;
 
   const models = codingModels.map((model) => {
-    const plat = getPlatformModel(platformModels, model.id);
+    const plat = platformModels.get(model.id);
     const inputModalities = plat?.architecture?.input_modalities ?? ["text"];
     const input: Array<"text" | "image"> = [];
     if (inputModalities.includes("text")) input.push("text");
